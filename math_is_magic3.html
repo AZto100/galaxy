@@ -67,7 +67,7 @@
 </head>
 <body>
 
-  <h1>Decimal Long Division Formatter</h1>
+  <h1>Decimal Long Division Formatter with two amazing examples!</h1>
 
   <div class="controls">
     <label>
@@ -76,26 +76,30 @@
     </label>
 
     <label>
-      Denominator
+      Denominator (try 998001)
       <input id="denominatorInput" type="text" value="999999999998000000000000">
     </label>
 
     <label>
-      Number of groups
+      Number of groups (try 1000)
       <input id="groupCountInput" type="number" value="40" step="1">
     </label>
 
     <label>
-      Group size
+      Group size (try 3)
       <input id="groupSizeInput" type="number" value="12" step="1">
     </label>
 
     <label>
-      Groups per row
+      Groups per row (try 20)
       <input id="groupsPerRowInput" type="number" value="10" step="1">
     </label>
 
     <button onclick="calculate()">Calculate</button>
+    <label>
+      <br>If you use the value 998001 you get 000 001 002 003 up to 997 then 999!
+      <br>If you use the default values you get the Binary Base values 2^1 2^2 etc from division!
+    </label>
   </div>
 
   <div id="status"></div>
