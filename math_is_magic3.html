@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Decimal Long Division Formatter</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background: #f7f7f7;
+      color: #111;
+    }
+
+    h1 {
+      font-size: 24px;
+    }
+
+    .controls {
+      display: flex;
+      gap: 12px;
+      align-items: end;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+      background: white;
+      border: 1px solid #ccc;
+      padding: 16px;
+      max-width: 1100px;
+    }
+
+    label {
+      display: flex;
+      flex-direction: column;
+      font-weight: bold;
+      font-size: 14px;
+    }
+
+    input {
+      font-size: 16px;
+      padding: 8px;
+      width: 180px;
+      margin-top: 4px;
+    }
+
+    button {
+      padding: 9px 16px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    #status {
+      margin-bottom: 12px;
+      font-family: Arial, sans-serif;
+      color: #444;
+    }
+
+    #output {
+      white-space: pre;
+      font-family: Consolas, "Courier New", monospace;
+      background: white;
+      border: 1px solid #ccc;
+      padding: 16px;
+      font-size: 16px;
+      line-height: 1.5;
+      overflow-x: auto;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Decimal Long Division Formatter</h1>
+
+  <div class="controls">
+    <label>
+      Numerator
+      <input id="numeratorInput" type="text" value="1">
+    </label>
+
+    <label>
+      Denominator
+      <input id="denominatorInput" type="text" value="998001">
+    </label>
+
+    <label>
+      Number of groups
+      <input id="groupCountInput" type="number" value="1000" step="1">
+    </label>
+
+    <label>
+      Group size
+      <input id="groupSizeInput" type="number" value="3" step="1">
+    </label>
+
+    <label>
+      Groups per row
+      <input id="groupsPerRowInput" type="number" value="20" step="1">
+    </label>
+
+    <button onclick="calculate()">Calculate</button>
+  </div>
+
+  <div id="status"></div>
+  <div id="output"></div>
+
+  <script>
+    function gcd(a, b) {
+      a = a < 0n ? -a : a;
+      b = b < 0n ? -b : b;
+
+      while (b !== 0n) {
+        const temp = b;
+        b = a % b;
+        a = temp;
+      }
+
+      return a;
+    }
+
+    function parseDecimalToFraction(valueText) {
+      let text = valueText.trim();
+
+      if (text === "") {
+        throw new Error("Empty number.");
+      }
+
+      let sign = 1n;
+
+      if (text.startsWith("-")) {
+        sign = -1n;
+        text = text.slice(1);
+      } else if (text.startsWith("+")) {
+        text = text.slice(1);
+      }
+
+      if (!/^\d*\.?\d+$/.test(text)) {
+        throw new Error("Invalid number: " + valueText);
+      }
+
+      if (!text.includes(".")) {
+        return {
+          numerator: sign * BigInt(text),
+          denominator: 1n
+        };
+      }
+
+      const parts = text.split(".");
+      const wholePart = parts[0] === "" ? "0" : parts[0];
+      const decimalPart = parts[1];
+
+      const scale = 10n ** BigInt(decimalPart.length);
+
+      const wholeAsScaled = BigInt(wholePart) * scale;
+      const decimalAsScaled = BigInt(decimalPart);
+
+      let numerator = sign * (wholeAsScaled + decimalAsScaled);
+      let denominator = scale;
+
+      const divisor = gcd(numerator, denominator);
+
+      numerator = numerator / divisor;
+      denominator = denominator / divisor;
+
+      return { numerator, denominator };
+    }
+
+    function calculate() {
+      const numeratorText = document.getElementById("numeratorInput").value;
+      const denominatorText = document.getElementById("denominatorInput").value;
+
+      const totalGroups = Number(document.getElementById("groupCountInput").value);
+      const groupSize = Number(document.getElementById("groupSizeInput").value);
+      const groupsPerRow = Number(document.getElementById("groupsPerRowInput").value);
+
+      const statusEl = document.getElementById("status");
+      const outputEl = document.getElementById("output");
+
+      outputEl.textContent = "";
+      statusEl.textContent = "";
+
+      try {
+        if (totalGroups <= 0 || !Number.isInteger(totalGroups)) {
+          throw new Error("Number of groups must be a positive whole number.");
+        }
+
+        if (groupSize <= 0 || !Number.isInteger(groupSize)) {
+          throw new Error("Group size must be a positive whole number.");
+        }
+
+        if (groupsPerRow <= 0 || !Number.isInteger(groupsPerRow)) {
+          throw new Error("Groups per row must be a positive whole number.");
+        }
+
+        const numeratorFraction = parseDecimalToFraction(numeratorText);
+        const denominatorFraction = parseDecimalToFraction(denominatorText);
+
+        if (denominatorFraction.numerator === 0n) {
+          throw new Error("Denominator cannot be 0.");
+        }
+
+        /*
+          Convert:
+
+              numeratorText / denominatorText
+
+          into an exact fraction:
+
+              (a / b) / (c / d)
+            = (a * d) / (b * c)
+        */
+
+        let numerator =
+          numeratorFraction.numerator * denominatorFraction.denominator;
+
+        let denominator =
+          numeratorFraction.denominator * denominatorFraction.numerator;
+
+        if (denominator < 0n) {
+          numerator = -numerator;
+          denominator = -denominator;
+        }
+
+        const divisor = gcd(numerator, denominator);
+        numerator = numerator / divisor;
+        denominator = denominator / divisor;
+
+        const isNegative = numerator < 0n;
+        if (isNegative) {
+          numerator = -numerator;
+        }
+
+        const digitsNeeded = totalGroups * groupSize;
+
+        const integerPart = numerator / denominator;
+        let remainder = numerator % denominator;
+
+        let digits = "";
+
+        for (let i = 0; i < digitsNeeded; i++) {
+          remainder *= 10n;
+          const digit = remainder / denominator;
+          remainder = remainder % denominator;
+          digits += digit.toString();
+
+          if (i % 10000 === 0 && i > 0) {
+            statusEl.textContent =
+              "Calculated " + i.toLocaleString() + " decimal digits...";
+          }
+        }
+
+        const groups = [];
+
+        for (let i = 0; i < totalGroups; i++) {
+          groups.push(
+            digits.slice(i * groupSize, i * groupSize + groupSize)
+          );
+        }
+
+        let output = "";
+
+        output += (isNegative ? "-" : "") + integerPart.toString() + ".\n";
+
+        for (let start = 0; start < totalGroups; start += groupsPerRow) {
+          const end = Math.min(start + groupsPerRow, totalGroups);
+          output += groups.slice(start, end).join(" ") + "\n";
+        }
+
+        outputEl.textContent = output;
+
+        statusEl.textContent =
+          "Done. Calculated " +
+          digitsNeeded.toLocaleString() +
+          " decimal digits from " +
+          numeratorText +
+          " / " +
+          denominatorText +
+          ". Exact internal fraction: " +
+          (isNegative ? "-" : "") +
+          numerator.toString() +
+          " / " +
+          denominator.toString() +
+          ". Group size: " +
+          groupSize +
+          ".";
+
+      } catch (error) {
+        outputEl.textContent = "Error: " + error.message;
+      }
+    }
+  </script>
+
+</body>
+</html>
